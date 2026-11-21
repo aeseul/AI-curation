@@ -1,0 +1,6 @@
+{
+  "name": "AI 편의점 꿀조합 큐레이터",
+  "description": "5,000원으로 즐기는 최고의 한 끼 · 내 주변 편의점에서 찾는 나만의 꿀조합",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

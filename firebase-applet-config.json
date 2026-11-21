@@ -1,0 +1,12 @@
+{
+  "projectId": "sportsaimakers",
+  "appId": "1:787349364946:web:45c58375d601a5659b0d0b",
+  "apiKey": "AIzaSyC5f1GZOTskbkhPy43OyiKamY-Ks0c2InQ",
+  "authDomain": "sportsaimakers.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-ai-a42baa8a-f148-42e1-919a-ec0c57216449",
+  "storageBucket": "sportsaimakers.firebasestorage.app",
+  "messagingSenderId": "787349364946",
+  "measurementId": "",
+  "oAuthClientId": "787349364946-ca5o9o6uja0h5q0pgsc8ps83spb0l63f.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
+}

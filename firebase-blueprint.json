@@ -1,0 +1,205 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user preferences and non-PII profile settings",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID"
+        },
+        "nickname": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Display nickname"
+        },
+        "preferredBrand": {
+          "type": "string",
+          "enum": ["GS25", "CU", "SEVEN_ELEVEN", "EMART24"],
+          "description": "Preferred convenience store brand"
+        },
+        "defaultBudget": {
+          "type": "integer",
+          "description": "Default meal budget in KRW"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["uid", "nickname", "preferredBrand", "defaultBudget", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII document for authenticated user",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "updatedAt"]
+    },
+    "FavoriteCombo": {
+      "title": "FavoriteCombo",
+      "description": "User-saved convenience store meal combination",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "brand": {
+          "type": "string",
+          "enum": ["GS25", "CU", "SEVEN_ELEVEN", "EMART24"]
+        },
+        "storeName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "comboTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "totalPrice": {
+          "type": "integer"
+        },
+        "budget": {
+          "type": "integer"
+        },
+        "recommendationPayload": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "brand",
+        "storeName",
+        "comboTitle",
+        "totalPrice",
+        "budget",
+        "recommendationPayload",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RecommendationHistoryItem": {
+      "title": "RecommendationHistoryItem",
+      "description": "User recommendation history record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "brand": {
+          "type": "string",
+          "enum": ["GS25", "CU", "SEVEN_ELEVEN", "EMART24"]
+        },
+        "storeName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "comboTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "totalPrice": {
+          "type": "integer"
+        },
+        "budget": {
+          "type": "integer"
+        },
+        "recommendationPayload": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "brand",
+        "storeName",
+        "comboTitle",
+        "totalPrice",
+        "budget",
+        "recommendationPayload",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User preference profile document, strictly owner-only"
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII document (email), strictly owner-only"
+    },
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": { "$ref": "#/entities/FavoriteCombo" },
+      "description": "Saved meal combinations belonging to userId"
+    },
+    "/users/{userId}/recommendations/{recommendationId}": {
+      "schema": { "$ref": "#/entities/RecommendationHistoryItem" },
+      "description": "Recommendation history entries belonging to userId"
+    }
+  }
+}

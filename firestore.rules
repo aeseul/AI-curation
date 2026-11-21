@@ -1,0 +1,217 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidBrand(brand) {
+      return brand in ['GS25', 'CU', 'SEVEN_ELEVEN', 'EMART24'];
+    }
+
+    // Validation Blueprint: UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'nickname', 'preferredBrand', 'defaultBudget', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'nickname', 'preferredBrand', 'defaultBudget', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 40
+        && isValidBrand(data.preferredBrand)
+        && data.defaultBudget is int && data.defaultBudget >= 1 && data.defaultBudget <= 1000000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: UserPrivateInfo (PII)
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: FavoriteCombo
+    function isValidFavoriteCombo(data) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'brand',
+        'storeName',
+        'comboTitle',
+        'totalPrice',
+        'budget',
+        'recommendationPayload',
+        'createdAt',
+        'updatedAt'
+      ])
+        && data.keys().hasOnly([
+          'id',
+          'userId',
+          'brand',
+          'storeName',
+          'comboTitle',
+          'totalPrice',
+          'budget',
+          'recommendationPayload',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidBrand(data.brand)
+        && data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 120
+        && data.comboTitle is string && data.comboTitle.size() >= 1 && data.comboTitle.size() <= 120
+        && data.totalPrice is int && data.totalPrice >= 0 && data.totalPrice <= 1000000
+        && data.budget is int && data.budget >= 1 && data.budget <= 1000000
+        && data.recommendationPayload is map
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: RecommendationHistoryItem
+    function isValidRecommendationHistory(data) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'brand',
+        'storeName',
+        'comboTitle',
+        'totalPrice',
+        'budget',
+        'recommendationPayload',
+        'createdAt'
+      ])
+        && data.keys().hasOnly([
+          'id',
+          'userId',
+          'brand',
+          'storeName',
+          'comboTitle',
+          'totalPrice',
+          'budget',
+          'recommendationPayload',
+          'createdAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidBrand(data.brand)
+        && data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 120
+        && data.comboTitle is string && data.comboTitle.size() >= 1 && data.comboTitle.size() <= 120
+        && data.totalPrice is int && data.totalPrice >= 0 && data.totalPrice <= 1000000
+        && data.budget is int && data.budget >= 1 && data.budget <= 1000000
+        && data.recommendationPayload is map
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && isOwner(userId) && (resource == null || existing().uid == request.auth.uid);
+      allow list: if false;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['nickname', 'preferredBrand', 'defaultBudget', 'updatedAt']);
+      allow delete: if isSignedIn() && isValidId(userId) && isOwner(userId) && existing().uid == request.auth.uid;
+
+      match /private/{docId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(docId) && isOwner(userId) && (resource == null || existing().uid == request.auth.uid);
+        allow list: if false;
+        allow create: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'info'
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming())
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'info'
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming())
+          && incoming().uid == existing().uid
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'updatedAt']);
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(docId) && isOwner(userId) && existing().uid == request.auth.uid;
+      }
+
+      match /favorites/{favoriteId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(favoriteId) && isOwner(userId) && (resource == null || existing().userId == request.auth.uid);
+        allow list: if isSignedIn() && isOwner(userId) && existing().userId == request.auth.uid;
+        allow create: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(favoriteId)
+          && isOwner(userId)
+          && isValidFavoriteCombo(incoming())
+          && incoming().id == favoriteId
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(favoriteId)
+          && isOwner(userId)
+          && isValidFavoriteCombo(incoming())
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['storeName', 'comboTitle', 'totalPrice', 'budget', 'recommendationPayload', 'updatedAt']);
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(favoriteId) && isOwner(userId) && existing().userId == request.auth.uid;
+      }
+
+      match /recommendations/{recommendationId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(recommendationId) && isOwner(userId) && (resource == null || existing().userId == request.auth.uid);
+        allow list: if isSignedIn() && isOwner(userId) && existing().userId == request.auth.uid;
+        allow create: if isSignedIn()
+          && isValidId(userId)
+          && isValidId(recommendationId)
+          && isOwner(userId)
+          && isValidRecommendationHistory(incoming())
+          && incoming().id == recommendationId
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(recommendationId) && isOwner(userId) && existing().userId == request.auth.uid;
+      }
+    }
+  }
+}
